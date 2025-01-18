@@ -38,7 +38,7 @@ from setting import Data_Dir, Img_Size, device, Content_Layers, Style_Layers
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-print(device)
+# print(device)
 
 # = = =
 # вспомогаьельные функйии для CNN

@@ -30,6 +30,7 @@ from setting import *
 # # сохраняем новое изображение
 # img2.save("forest_new.jpg")
 
+# '⚠️
 
 # = = =
 
@@ -64,7 +65,7 @@ def img_show(tensor):
 
     # plt.imshow(image)
 
-    return  plt.imshow(image)
+    return plt.imshow(image)
 
 
 # --- возврат изображения в исходный размер из тензоза
@@ -113,7 +114,7 @@ for key, val in dict_image.items():
       style_img[ key ]. append( tensor_img )
 
 # пример тензора
-print(dict_image)
+# print(dict_image)
 # print(Img_Size)
 # print(style_img['cubism'][1][0])
 
@@ -122,3 +123,5 @@ print(dict_image)
 # print( img_style_proba (2) )
 # img_show(style_img['cubism'][1][0] )
 # plt.show()
+# print('123')
+

@@ -73,7 +73,7 @@ up_but = {}  # кнопка обновить
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #  словари для Style
 
-dic_numb = {}  # название (номер) изображения для стиля
+dic_style = {}  # название (номер) изображения для стиля
 dic_img = {}   # название загруженного файла и размер
 
 
@@ -578,7 +578,7 @@ def style_img(message):
     ]
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(*buttons)
-    bot.send_message(message.chat.id, f'Выберите изображение для переноса стиля:\n {text_style}', reply_markup=keyboard)
+    bot.send_message(message.chat.id, f'Выберите изображение стиля для переноса:\n {text_style}', reply_markup=keyboard)
 
 # -----Редактирвать список
 @bot.message_handler(commands=["edit", "EDIT", "Edit", "Редактировать", "редактировать", "РЕДАКТИРОВАТЬ"])
@@ -970,19 +970,40 @@ def _del(message):
 # @bot.message_handler(content_types=['photo'])
 @bot.message_handler(content_types=['document', 'audio', 'video', 'photo'])
 def photo(message):
-     # fileID = message.photo[-1].file_id
-     fileID = message.document.file_id if message.content_type == 'document' else \
+    user_id = str(message.from_user.id)  # id пользователя
+    # блок нормализации списков по ID пользователя
+    style_marker[user_id] = 0
+
+    add_marker[user_id] = 0
+    edit_marker[user_id] = 0
+    union_marker[user_id] = 0
+    share_marker[user_id] = 0
+    back_marker[user_id] = 0
+    sms_marker[user_id] = 0
+    drop_id_marker[user_id] = 0
+    serv_marker[user_id] = 0
+
+    share_but[user_id] = 0
+    friendly_but[user_id] = 0
+    alien_but[user_id] = 0
+    y_but[user_id] = 0
+    n_but[user_id] = 0
+    up_but[user_id] = 0
+
+    # fileID = message.photo[-1].file_id
+    fileID = message.document.file_id if message.content_type == 'document' else \
          message.audio.file_id if message.content_type == 'audio' else \
              message.video.file_id if message.content_type == 'video' else \
                  message.photo[-1].file_id if message.content_type == 'photo' else None
-     file_info = bot.get_file(fileID)
-     file_extension = os.path.splitext(file_info.file_path)[-1].lower()
+    file_info = bot.get_file(fileID)
+    file_extension = os.path.splitext(file_info.file_path)[-1].lower()
 
-     # тип файла # bot.send_message(message.chat.id, f' 🟢 {file_extension}')
-     if file_extension in ['.jpg', '.jpeg', '.png']:
+
+    # тип файла # bot.send_message(message.chat.id, f' 🟢 {file_extension}')
+    if file_extension in ['.jpg', '.jpeg', '.png']:
 
         downloaded_file = bot.download_file(file_info.file_path)
-        ph = message.photo[len(message.photo) - 1].file_id
+        # img_photo = message.photo[len(message.photo) - 1].file_id
 
         #  загрузка изображения
         text = f'img_{user_id}.jpg'
@@ -991,21 +1012,77 @@ def photo(message):
 
         #     размер исходного изображения
         in_img_size = img_size(text)
-        #  название исходного файла и размер
+        #  название исходного файла и размер  в словарь
         dic_img[user_id] = [text, in_img_size ]
-        if dic_numb.get(user_id) is not None:
-            a = '1'
+
+        #  проверка на выбор изображения стиля
+        if dic_style.get(user_id) is not None:
+
+           a = 1
+
+           bot.send_message(message.chat.id, f'[ ■_■_■_□_□_□_□ ]\n'
+                                             f'... выполняю перенос стиля...\n'
+                                             f'... это займет не более 1 мин.')
+
+           # изображение контент
+           img_content = image_loader (text)
+           #  изображение для модели
+           img_input = img_content.clone()
+
+           # # N_Step = 60
+           # output, score_style, score_content = run_style_transfer(model_vgg, cnn_normalization_mean,
+           #                                                         cnn_normalization_std, img_content,
+           #                                                         img_style, img_input,
+           #                                                         num_steps=N_Step,
+           #                                                         style_weight=1000000,
+           #                                                         content_weight=1)
+
+           output_model, score_style, score_content = run_style_transfer(model_vgg, cnn_normalization_mean,
+                                                                   cnn_normalization_std, img_content,
+                                                                   img_style, img_input,
+                                                                   num_steps=N_Step,
+                                                                   style_weight=1000000,
+                                                                   content_weight=1)
+
+           # преобразование изображение в исходный размер
+           img_resize = resize_loader(output)
+           # imshow(img_resize)
+
+           buttons = [
+               types.InlineKeyboardButton('Меню', callback_data='menu'),
+               types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+               types.InlineKeyboardButton('Новый стиль', callback_data='new_style'),
+               types.InlineKeyboardButton('Новое изображение', callback_data='new_image')
+           ]
+           keyboard = types.InlineKeyboardMarkup(row_width=2)
+           keyboard.add(*buttons)
+
+           bot.send_photo(message.chat.id, img_resize, caption='Новое изображение', reply_markup=keyboard )
+
+
+           # bot.send_message(message.chat.id, f' получено размер🟢 {in_img_size}')
         else:
             # изображения стиля не выбрано
             # предложить варианты стиля
-            pass
+            style_marker[user_id] = 1
+
+            buttons = [
+                types.InlineKeyboardButton('Меню', callback_data='menu'),
+                types.InlineKeyboardButton('Завершить', callback_data='cancel')
+            ]
+            keyboard = types.InlineKeyboardMarkup(row_width=2)
+            keyboard.add(*buttons)
+            bot.send_message(message.chat.id, f'Выберите изображение для переноса стиля:\n {text_style}',
+                             reply_markup=keyboard)
 
         # bot.send_message(message.chat.id, f' получено размер🟢 {in_img_size}')
      else:
-        bot.send_message(message.chat.id, f'отправиь картинку в Jpeg')
+        bot.send_message(message.chat.id, f' Неудалось распознать файл.\n'
+                                          f'Пришлите изображение в фармате "jpеg" или "png" ')
 
      #    отправить фото в ответ
-     # bot.send_photo(message.chat.id, ph, caption='Ваш текст')
+    # img_photo = message.photo[len(message.photo) - 1].file_id
+    # bot.send_photo(message.chat.id, img_photo, caption='Ваш текст')
 
 
 # ---------------------------------------------
@@ -1069,6 +1146,66 @@ def callback_worker(call):
                 keyboard = types.InlineKeyboardMarkup(row_width=2)
                 keyboard.add(*buttons)
                 bot.send_message(call.message.chat.id, f'❗ Список покупок пуст.', reply_markup=keyboard)
+
+        #  Выбор стиля для изображения
+        elif call.data == "new_style":
+            style_marker[user_id] = 1
+
+            tag_marker[user_id] = 0
+            add_marker[user_id] = 0
+            edit_marker[user_id] = 0
+            union_marker[user_id] = 0
+            share_marker[user_id] = 0
+            sms_marker[user_id] = 0
+            drop_id_marker[user_id] = 0
+            serv_marker[user_id] = 0
+            share_but[user_id] = 0
+            friendly_but[user_id] = 0
+            alien_but[user_id] = 0
+            y_but[user_id] = 0
+            n_but[user_id] = 0
+            up_but[user_id] = 0
+
+            buttons = [
+                types.InlineKeyboardButton('Меню', callback_data='menu'),
+                types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+                types.InlineKeyboardButton('Пример стиля', callback_data='proba_style')
+            ]
+            keyboard = types.InlineKeyboardMarkup(row_width=2)
+            keyboard.add(*buttons)
+            bot.send_message(message.chat.id, f'Выберите изображение стиля для переноса:\n {text_style}',
+                             reply_markup=keyboard)
+
+        #  Показ примера стиля
+        elif call.data == "new_style":
+
+            style_marker[user_id] = 0
+            proba_marker[user_id] = 1
+
+            tag_marker[user_id] = 0
+            add_marker[user_id] = 0
+            edit_marker[user_id] = 0
+            union_marker[user_id] = 0
+            share_marker[user_id] = 0
+            sms_marker[user_id] = 0
+            drop_id_marker[user_id] = 0
+            serv_marker[user_id] = 0
+            share_but[user_id] = 0
+            friendly_but[user_id] = 0
+            alien_but[user_id] = 0
+            y_but[user_id] = 0
+            n_but[user_id] = 0
+            up_but[user_id] = 0
+
+            buttons = [
+                types.InlineKeyboardButton('Меню', callback_data='menu'),
+                types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+                types.InlineKeyboardButton('Пример стиля', callback_data='proba_style')
+            ]
+            keyboard = types.InlineKeyboardMarkup(row_width=2)
+            keyboard.add(*buttons)
+            bot.send_message(message.chat.id, f'Выберите категорию стиля изображения:\n {text_style}',
+                             reply_markup=keyboard)
 
         #  Выполнение Кнопки Вернуть (в список отмеченную позицию)
         elif call.data == "back":
@@ -2397,6 +2534,10 @@ def echo(message):
 
     # ---Сценарий - завершение всех команд
     if word == "/":
+
+        proba_marker[user_id] = 0
+        style_marker[user_id] = 0
+
         add_marker[user_id] = 0
         tag_marker[user_id] = 0
         edit_marker[user_id] = 0
@@ -2423,7 +2564,73 @@ def echo(message):
         bot.send_message(message.chat.id, "⛔ Выполнение команды завершено.", reply_markup=keyboard)
 
     # !!!!!!!!!!!!!
-    # --- Сценарий -  выбрана кнопка "Стиль" - показать пример стиля
+
+    # --- Сценарий -  показ стиля изображенмя
+    elif proba_marker[user_id] == 1:
+
+        style_marker[user_id] == 0
+
+        add_marker[user_id] = 0
+        edit_marker[user_id] = 0
+        union_marker[user_id] = 0
+        share_marker[user_id] = 0
+        back_marker[user_id] = 0
+        sms_marker[user_id] = 0
+        drop_id_marker[user_id] = 0
+        serv_marker[user_id] = 0
+
+        share_but[user_id] = 0
+        friendly_but[user_id] = 0
+        alien_but[user_id] = 0
+        y_but[user_id] = 0
+        n_but[user_id] = 0
+        up_but[user_id] = 0
+
+        #     -----------------------
+        #  ✔️ ‼️
+        Nomer = message.text
+        if Nomer.isnumeric() == True:  # провкрка на число
+            Nomer = int(message.text)
+
+            buttons = [
+                types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+                types.InlineKeyboardButton('Меню', callback_data='menu')
+            ]
+            keyboard = types.InlineKeyboardMarkup(row_width=2)  # наша клавиатура (кол-во кнопок в ряд)
+            keyboard.add(*buttons)
+
+            if Nomer <= len(list_style[user_id]) and Nomer > 0:
+
+                #  название стиля изображения
+                name_style = list_style[Nomer][0]
+                img_style_proba = img_style_proba(Nomer)
+
+                text = f'✔️ - выбран стиль: {name_style}'
+
+                bot.send_photo(message.chat.id, img_style_proba )
+                bot.send_message(message.chat.id, f'{text}', reply_markup=keyboard)
+
+            else:
+                # buttons = [
+                #     types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+                #     types.InlineKeyboardButton('Меню', callback_data='menu')
+                # ]
+                # keyboard = types.InlineKeyboardMarkup(row_width=2)  # наша клавиатура (кол-во кнопок в ряд)
+                # keyboard.add(*buttons)
+                bot.send_message(message.chat.id, f'🚫 {Nomer} - такого номера в cписке нет',
+                                 reply_markup=keyboard)
+        else:
+            text_3 = f'⚠️ Введите цифрами номер из списка.'
+            # buttons = [
+            #     types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+            #     types.InlineKeyboardButton('Меню', callback_data='menu')
+            # ]
+            # keyboard = types.InlineKeyboardMarkup(row_width=2)  # наша клавиатура (кол-во кнопок в ряд)
+            # keyboard.add(*buttons)
+            bot.send_message(message.chat.id, f'{text_3}\n {text_style}', reply_markup=keyboard)
+
+
+    # --- Сценарий -  выбор стиля
     elif style_marker[user_id] == 1:
 
         add_marker[user_id] = 0
