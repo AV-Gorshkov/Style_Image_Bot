@@ -34,7 +34,16 @@ from PIL import Image
 import warnings
 warnings.simplefilter("ignore")
 
-from setting import Data_Dir, Img_Size, device, Content_Layers, Style_Layers
+from setting import *
+
+# from file_img import *
+#
+# #  вывод изображения стиля
+# name_style = 'cubism'
+# print( img_style_proba (name_style) )
+#  # img_show(style_img['cubism'][1][0] )
+# plt.show()
+
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -221,4 +230,4 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
 
 model_vgg = models.vgg19(pretrained=True).features.to(device).eval()
 
-print(model_vgg)
+# print(model_vgg)

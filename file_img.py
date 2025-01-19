@@ -15,6 +15,7 @@ from torchvision import transforms
 from PIL import Image
 
 # from setting import Data_Dir, Img_Size, device
+import requests
 from setting import *
 
 # img7 = Image.open("file_0.jpg")
@@ -62,10 +63,10 @@ def img_show(tensor):
     image = tensor.cpu().clone()
     image = image.squeeze(0)
     image = unloader(image)
-
     # plt.imshow(image)
 
-    return plt.imshow(image)
+    return  image
+
 
 
 # --- возврат изображения в исходный размер из тензоза
@@ -80,11 +81,11 @@ def resize_loader(in_image, in_size):
       return out_image.to(device, torch.float)
 
 #  - - - пример случайного изображения стиля
-def img_style_proba (Nomer):
+def img_style_proba (name_style):
 
     num = random.randint(0, 2)
-    key = list_style[Nomer][0]
-    img_proba = img_show(style_img[key][num])
+    # key = list_style[Nomer][0]
+    img_proba = img_show(style_img[name_style][num])
 
     return img_proba
 
@@ -120,8 +121,35 @@ for key, val in dict_image.items():
 
 
 #  вывод изображения стиля
-# print( img_style_proba (2) )
+# tx = 'cubism'
+#
+# im = img_style_proba (tx)
+# print(im)
+#
+# print(im.format, im.size, im.mode)
+#
+# ph = im.show()
+#
+# print(ph)
+
+
 # img_show(style_img['cubism'][1][0] )
 # plt.show()
+# ph = Image.open (im)
+
+# ph = open( img_style_proba (tx), 'rb')
+
+#     new_img = new_file.write(downloaded_file)
+
 # print('123')
+
+
+# name1 = 'file_0.jpg'
+# img = Image.open(name1)
+# plt.imshow(img)
+# print(Image.open(name1) )
+# plt.show()
+
+# удалить файл
+# os.remove(name1)
 
