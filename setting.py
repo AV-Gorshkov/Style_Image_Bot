@@ -63,4 +63,5 @@ Style_Layers = ['conv_1',
                 'conv_5'
                ]
 # кол-во итерций переноса стиля
-N_Step = 60
+# N_step = 60
+N_Step = 100

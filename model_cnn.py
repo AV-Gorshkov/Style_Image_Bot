@@ -26,7 +26,6 @@ import torchvision
 from torchvision import transforms
 import torchvision.models as models
 
-
 import matplotlib.pyplot as plt
 from PIL import Image
 
@@ -67,7 +66,6 @@ class ContentLoss(nn.Module):
 
 # - функция потерь для стиля
 # матрица Грама
-
 def gram_matrix( input):
 
     a, b, c, d = input.size()
@@ -85,7 +83,6 @@ def gram_matrix( input):
     return G.div(a * b * c * d)
 
 #  - подсчет loss для изображения стиля
-
 class StyleLoss(nn.Module):
 
     def __init__(self, target_feature):
@@ -93,7 +90,7 @@ class StyleLoss(nn.Module):
         self.target = gram_matrix(target_feature).detach()
 
     def forward(self, input):
-        G = gram_matrix(in_put)
+        G = gram_matrix(input)
         self.loss = F.mse_loss(G, self.target)
         return input
 
@@ -117,7 +114,7 @@ class Normalization(nn.Module):
 
 def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
                                style_img, content_img,
-                               ontent_layers=Content_Layers,
+                               content_layers=Content_Layers,
                                style_layers=Style_Layers):
     cnn = copy.deepcopy(cnn)
 

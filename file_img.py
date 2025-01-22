@@ -17,6 +17,7 @@ from PIL import Image
 # from setting import Data_Dir, Img_Size, device
 import requests
 from setting import *
+from model_cnn import *
 
 # img7 = Image.open("file_0.jpg")
 
@@ -40,7 +41,7 @@ def img_size (in_img):
     in_img = Image.open(in_img)
     height, width = in_img.size
 
-    return (height, width)
+    return ( width, height)
 
 # --- преобразования изображения в тензор
 
@@ -67,8 +68,6 @@ def img_show(tensor):
 
     return  image
 
-
-
 # --- возврат изображения в исходный размер из тензоза
 # in_size - исходный размер входящего изображения
 def resize_loader(in_image, in_size):
@@ -77,17 +76,23 @@ def resize_loader(in_image, in_size):
               transforms.Resize(in_size)
               ])
       out_image = out_loader(in_image)
+      out_image.to(device, torch.float)
+      out_image = img_show (out_image)
 
-      return out_image.to(device, torch.float)
+      return out_image
 
 #  - - - пример случайного изображения стиля
-def img_style_proba (name_style):
+def img_style_sample (name_style):
 
+    rnd_img = random_image (name_style)
+    img_sample = img_show(rnd_img)
+
+    return img_sample
+
+#  выбор случайного изображения стиля из колекции
+def random_image (name_style):
     num = random.randint(0, 2)
-    # key = list_style[Nomer][0]
-    img_proba = img_show(style_img[name_style][num])
-
-    return img_proba
+    return tensor_style_img [name_style] [num]
 
 # = = =
 # загрузка данных стилей из папки
@@ -104,21 +109,48 @@ for path in data_image_paths:
     dict_image[ path.split('\\')[-2] ]. append(path.split('\\')[-1])
 
 # - преобразуем изображения стилей в тензоры и упакуем их в словарь
-style_img = {}
+tensor_style_img = {}
 
 for key, val in dict_image.items():
   for el in val:
    tensor_img =image_loader ( Data_Dir + key + '/' + el)
-   if style_img.get( key ) is None:
-      style_img[ key ] = [ tensor_img]
+   if tensor_style_img.get( key ) is None:
+      tensor_style_img[ key ] = [ tensor_img]
    else:
-      style_img[ key ]. append( tensor_img )
+      tensor_style_img[ key ]. append( tensor_img )
+
+
+ #  перенос стиля на изображение
+
+def style_apply(lst_img, lst_style ):
+
+    #  начальный размер файла
+    in_size = lst_img[1]
+    #  изображение стиля
+    img_style = lst_style[1]
+    # изображение контент
+    img_content = image_loader ( lst_img[0])
+    #  изображение для модели
+    img_input = img_content.clone()
+    # запуск модели CNN
+    output_model, score_style, score_content = run_style_transfer(model_vgg, cnn_normalization_mean,
+                                                                   cnn_normalization_std, img_content,
+                                                                   img_style, img_input,
+                                                                   num_steps=N_Step,
+                                                                   style_weight=1000000,
+                                                                   content_weight=1)
+
+    # преобразование изображение в исходный размер
+    output_img = resize_loader(output_model, in_size)
+
+    return output_img
+
 
 # пример тензора
 # print(dict_image)
 # print(Img_Size)
-# print(style_img['cubism'][1][0])
-
+# print(style_img['cubism'][1])
+# print(tensor_style_img['cubism'][1].shape)
 
 #  вывод изображения стиля
 # tx = 'cubism'
