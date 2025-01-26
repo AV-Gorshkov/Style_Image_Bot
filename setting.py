@@ -57,9 +57,8 @@ Style_Layers = ['conv_1',
                ]
 
 # ---  кол-во итерций переноса стиля
-# N_Step = 60
-# N_Step = 500
-dic_n_step = {'min': 100,
+
+dic_n_step = {'min': 200,
               'med': 600,
               'max': 1000
              }
