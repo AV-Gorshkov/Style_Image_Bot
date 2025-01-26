@@ -2,8 +2,6 @@ import requests
 
 from setting import *
 from file_img import *
-# from model_cnn import *
-# from setting import TG_TOKEN
 
 import os
 import telebot
@@ -14,22 +12,6 @@ import time
 
 from PIL import Image
 
-
-# import json
-# import random
-
-# # === обращение к БД Replit, поддержка работы 24/7
-# import os
-# from background import keep_alive  # #импорт функции для поддержки работоспособности
-#
-# from replit import db
-# import base
-#
-# import pip
-# pip.main(['install', 'pytelegrambotapi'])
-#
-
-# my_secret = os.environ['token']
 # -----------------------------
 
 bot = telebot.TeleBot(TG_TOKEN, skip_pending=True)
@@ -37,11 +19,11 @@ bot = telebot.TeleBot(TG_TOKEN, skip_pending=True)
 # --- Маркеры событий
 style_marker = {}  # маркер стиля изображения
 show_marker = {}   # маркер для просмотра стиля
-image_marker = {} # маркер загруженного изображения
 
-# --- словари для Style
-dic_style = {}  # название (номер) изображения для стиля dic_style[user_id]
-dic_img = {}   # название загруженного файла и имходный размер
+# --- словари
+dic_style = {} # стиль -  название изображения / тензор / русское название
+dic_img = {}   # контент - название загруженного файла / исходный размер / маркер поворота изображения
+dic_step = {}    # глубина стилизации (кол-во шагов итерации)
 # ---------------
 
 # = = = Описание команд и функций
@@ -49,7 +31,7 @@ dic_img = {}   # название загруженного файла и имх�
 HELP = """
 Приветствую!✌️ 
 Я Чат-Бот! Помогу преобразовать твое изображение под один из известных стилей.
-Просто загрузи свое изображение!
+Просто загрузи свое изображение и я помогу его преобразовать !
 Нажми на кнопку ниже, что бы узнать функционал доступных команд и их описание:
 ©️
 """
@@ -59,7 +41,8 @@ TEAM = """✏️ Команды доступные в приложении:
 /help - (Нelp, Справка, ? ) - вызов справки о программе, знакомство с приложением.
 /info - (Info, Описание) - описание действия команд и кнопок приложения.
 /sample - (Sample, Пример) - показать пример изображения стиля.
-/style - (Style, Стиль) - выбор изображение стиля.
+/style - (Style, Стиль) - выбор изображения стиля.
+/step - (Step, шаг) - выбор глубины стилизации (по умолчанию выбрано среднее значение).
 /end - (End, Отмена, /) - отмена, завершение команды.
 """
 
@@ -76,29 +59,7 @@ Info = """
 6. Завершить - завершение всех команд.
 """
 
-
-#  = = = Общие функции приложения
-# ----- Отмена всех команд
-# def cancel_id(user_id):
-#     # add_marker[user_id] = 0
-#     # tag_marker[user_id] = 0
-#     # edit_marker[user_id] = 0
-#     # union_marker[user_id] = 0
-#     # share_marker[user_id] = 0
-#     # back_marker[user_id] = 0
-#     # sms_marker[user_id] = 0
-#     # share_but[user_id] = 0
-#     # friendly_but[user_id] = 0
-#     # alien_but[user_id] = 0
-#     # y_but[user_id] = 0
-#     # n_but[user_id] = 0
-#     # up_but[user_id] = 0
-#     # drop_id_marker[user_id] = 0
-#     # serv_marker[user_id] = 0
-#     _text = f'❌ Неизвестная команда.'
-#     return _text
-
-# ----- Нормализация всех словарей - проверка на существование
+# ----- Нормализация всех словарей - проверка на существование и обнуление
 def normalization(user_id):
 
     if dic_img.get(user_id) is not None:
@@ -172,6 +133,24 @@ def info(message):
     keyboard.add(*buttons)
     bot.send_message(message.chat.id, Info, reply_markup=keyboard)
 
+#  ----- выбор глибины стилизации N_step
+@bot.message_handler(commands=["step", "STEP", "Step", "Шаг", "шаг", "ШАГ"])
+def style_img(message):
+    user_id = str(message.from_user.id)  # id пользователя
+
+    style_marker[user_id] = 0
+    show_marker[user_id] = 0
+
+    buttons = [
+        types.InlineKeyboardButton('Минимальное', callback_data='n_min'),
+        types.InlineKeyboardButton('Среднее', callback_data='n_med'),
+        types.InlineKeyboardButton('Максимальное', callback_data='n_max'),
+        types.InlineKeyboardButton('Завершить', callback_data='cancel')
+    ]
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    keyboard.add(*buttons)
+    bot.send_message(message.chat.id, f'🖍️Выберите глибину стилизации изображение:', reply_markup=keyboard)
+
 #  ----- выбор стиля для переноса
 @bot.message_handler(commands=["style", "STYLE", "Style", "Стиль", "стиль", "СТИЛЬ"])
 def style_img(message):
@@ -231,8 +210,8 @@ def show(message):
 def photo(message):
     user_id = str(message.from_user.id)  # id пользователя
 
-    style_marker[user_id] = 0
     show_marker[user_id] = 0
+    style_marker[user_id] = 0
 
     fileID = message.document.file_id if message.content_type == 'document' else \
          message.audio.file_id if message.content_type == 'audio' else \
@@ -247,28 +226,6 @@ def photo(message):
         downloaded_file = bot.download_file(file_info.file_path)
         img_photo = message.photo[len(message.photo) - 1].file_id
 
-        # path = bot.get_file(fileID)
-        # extn = '.' + str(path.file_path).split('.')[-1]
-        # print(extn)
-        # print(path)
-        # chat_id = message.chat.id
-        # url = r'https://api.telegram.org/bot'
-        #     # r'https://api.telegram.org'
-        # fl = requests.get(f'{url}{TG_TOKEN}/sendPhoto?chat_id={chat_id}&photo={img_photo}').text
-        # print(  img_photo )
-        # ph = Image.open(f'{url}{TG_TOKEN}/sendPhoto?chat_id={chat_id}&photo={img_photo}')
-        # nm = f'{url}{TG_TOKEN}/sendPhoto?chat_id={chat_id}&photo={img_photo}'
-        # print(f'{url}{TG_TOKEN}/sendPhoto?chat_id={chat_id}&photo={img_photo}')
-        # print( downloaded_file)
-        # ph = Image.open( nm)
-        # print( ph)
-        # print('---------------------------')
-        # bot.send_photo(message.chat.id, fl, caption='Ваш текст')
-
-        # bot.send_message(message.chat.id, f' изображения:\n {fl}')
-        # print('---------------------------')
-        #  загрузка изображения
-
         text = f'temp_image/img_{user_id}.jpg'
 
         with open( text , 'wb' ) as new_file:
@@ -277,54 +234,39 @@ def photo(message):
         # размер исходного изображения
         in_img_size = img_size(text)
         #  название исходного файла и исходный размер в словарь
-        dic_img[user_id] = [text, in_img_size ]
+        dic_img[user_id] = [text,  in_img_size[0], in_img_size[1] ]
+        # глубина стилизации N_step
+        if dic_step.get(user_id) is None:
+            dic_step[user_id] = dic_n_step['med']
 
-        # print( dic_img[user_id] )
+        print(dic_step[user_id])
 
         #  проверка на выбор изображения стиля
         if dic_style.get(user_id) is not None:
 
-           bot.send_message(message.chat.id, f'[ ■_■_□_□_□ ] ...выполняю перенос стиля...\n'
+               bot.send_message(message.chat.id, f'[ ■_■_□_□_□ ] ...выполняю перенос стиля...\n'
                                              f'⏰... это займет несколько минут...')
-           # #  начальный размер файла
-           # in_size = dic_img[user_id][1]
-           # #  изображение стиля
-           # img_style =dic_style[user_id][1]
-           # # изображение контент
-           # img_content = image_loader (text)
-           # #  изображение для модели
-           # img_input = img_content.clone()
-           # # запуск модели CNN
-           # output_model, score_style, score_content = run_style_transfer(model_vgg, cnn_normalization_mean,
-           #                                                         cnn_normalization_std, img_content,
-           #                                                         img_style, img_input,
-           #                                                         num_steps=N_Step,
-           #                                                         style_weight=1000000,
-           #                                                         content_weight=1)
-           #
-           # # преобразование изображение в исходный размер
-           # img_resize = resize_loader(output_model, in_size)
-           # print( dic_img[user_id], dic_style[user_id] )
 
-           output_img = style_apply( dic_img[user_id], dic_style[user_id] )
+               output_img = style_apply( dic_img[user_id], dic_style[user_id], dic_step[user_id] )
 
-           buttons = [
-               types.InlineKeyboardButton('Меню', callback_data='menu'),
-               types.InlineKeyboardButton('Завершить', callback_data='cancel'),
-               types.InlineKeyboardButton('Выбрать новый стиль', callback_data='new_style'),
-               types.InlineKeyboardButton('Загрузить новое изображение', callback_data='new_image')
-           ]
-           keyboard = types.InlineKeyboardMarkup(row_width=2)
-           keyboard.add(*buttons)
+               buttons = [
+                   types.InlineKeyboardButton('Меню', callback_data='menu'),
+                   types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+                   types.InlineKeyboardButton('Выбрать новый стиль', callback_data='new_style'),
+                   types.InlineKeyboardButton('Загрузить новое изображение', callback_data='new_image')
+               ]
+               keyboard = types.InlineKeyboardMarkup(row_width=2)
+               keyboard.add(*buttons)
 
-           bot.send_photo(message.chat.id, output_img)
-           bot.send_message(message.chat.id, f'✨ Новое изображение', reply_markup=keyboard )
-           # bot.send_photo(message.chat.id, img_resize, caption='Новое изображение', reply_markup=keyboard )
+               del dic_style[user_id]
+
+               bot.send_photo(message.chat.id, output_img)
+               bot.send_message(message.chat.id, f'✨ Новое изображение', reply_markup=keyboard )
+
         else:
             # изображения стиля не выбрано. предложить варианты стиля
             style_marker[user_id] = 1
             show_marker[user_id] = 0
-            image_marker [user_id] = 1
 
             buttons = [
                 types.InlineKeyboardButton('Меню', callback_data='menu'),
@@ -335,7 +277,6 @@ def photo(message):
             keyboard.add(*buttons)
             bot.send_message(message.chat.id, f'🖍️Выберите изображение стиля для переноса:\n{text_style}',
                              reply_markup=keyboard)
-
     else:
         buttons = [
             types.InlineKeyboardButton('Меню', callback_data='menu'),
@@ -354,9 +295,6 @@ def photo(message):
 def callback_worker(call):
 
     user_id = str(call.from_user.id)
-    # message_id = call.message.message_id
-    # chat_id = call.message.chat.id
-    # print(user_id)
 
     if call.message:
         # ----- Выполнение кнопки новое изобажение
@@ -376,10 +314,86 @@ def callback_worker(call):
             bot.send_message(call.message.chat.id, f'📥 Загрузите свое изображение для применения стиля',
                              reply_markup=keyboard)
 
+        #  Выбор глибины стиля N_Min
+        elif call.data == "n_min":
+
+            style_marker[user_id] = 0
+            show_marker[user_id] = 0
+
+            # глубина стилизации N_step
+            dic_step[user_id] = dic_n_step['min']
+
+            buttons = [
+                types.InlineKeyboardButton('Меню', callback_data='menu'),
+                types.InlineKeyboardButton('Описание команд', callback_data='info'),
+                types.InlineKeyboardButton('Добавить изображение', callback_data='new_image'),
+                types.InlineKeyboardButton('Пример стиля', callback_data='show_style')
+            ]
+            keyboard = types.InlineKeyboardMarkup(row_width=2)
+            keyboard.add(*buttons)
+            bot.send_message(call.message.chat.id, f'✔️ - выброно минимальное значение глубины стиля',
+                             reply_markup=keyboard)
+
+         #  Выбор глибины стиля N_Med
+        elif call.data == "n_med":
+
+            style_marker[user_id] = 0
+            show_marker[user_id] = 0
+
+            # глубина стилизации N_step
+            dic_step[user_id] = dic_n_step['med']
+
+            buttons = [
+                types.InlineKeyboardButton('Меню', callback_data='menu'),
+                types.InlineKeyboardButton('Описание команд', callback_data='info'),
+                types.InlineKeyboardButton('Добавить изображение', callback_data='new_image'),
+                types.InlineKeyboardButton('Пример стиля', callback_data='show_style')
+            ]
+            keyboard = types.InlineKeyboardMarkup(row_width=2)
+            keyboard.add(*buttons)
+            bot.send_message(call.message.chat.id, f'✔️ - выброно среднее значение глубины стиля',
+                             reply_markup=keyboard)
+
+         #  Выбор глибины стиля N_Max
+        elif call.data == "n_max":
+
+            style_marker[user_id] = 0
+            show_marker[user_id] = 0
+
+            # глубина стилизации N_step
+            dic_step[user_id] = dic_n_step['max']
+
+            buttons = [
+                types.InlineKeyboardButton('Меню', callback_data='menu'),
+                types.InlineKeyboardButton('Описание команд', callback_data='info'),
+                types.InlineKeyboardButton('Добавить изображение', callback_data='new_image'),
+                types.InlineKeyboardButton('Пример стиля', callback_data='show_style')
+            ]
+            keyboard = types.InlineKeyboardMarkup(row_width=2)
+            keyboard.add(*buttons)
+            bot.send_message(call.message.chat.id, f'✔️ - выброно максимальное значение глубины стиля',
+                             reply_markup=keyboard)
+
         #  Выбор стиля для изображения
-        elif call.data == "new_style":
+        elif call.data == "style":
 
             style_marker[user_id] = 1
+            show_marker[user_id]  = 0
+
+            buttons = [
+                types.InlineKeyboardButton('Меню', callback_data='menu'),
+                types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+                types.InlineKeyboardButton('Описание команд', callback_data='info')
+            ]
+            keyboard = types.InlineKeyboardMarkup(row_width=2)
+            keyboard.add(*buttons)
+            bot.send_message(call.message.chat.id, f'🖍️Выберите изображение стиля для переноса:\n {text_style}',
+                             reply_markup=keyboard)
+
+        #  Выбор нового стиля для изображения
+        elif call.data == "nwe_style":
+
+            style_marker[user_id] = 2
             show_marker[user_id]  = 0
 
             buttons = [
@@ -428,7 +442,7 @@ def callback_worker(call):
            # -----Выполнение Кнопка "Отмена" - завершение всех команд
         elif call.data == "cancel":
 
-            #  обнуляем словари и маркеры
+            # обнуляем словари и маркеры
             normalization(user_id)
 
             buttons = [
@@ -484,11 +498,10 @@ def callback_worker(call):
             style_marker[user_id] = 0
             show_marker[user_id] = 0
 
-            # print(user_id, dic_img[user_id], dic_style[user_id])
-
             bot.send_message(call.message.chat.id, f'[ ■_■_□_□_□ ] ...выполняю перенос стиля...\n'
                                               f'⏰... это займет не более 1 мин.')
-            output_img = style_apply(dic_img[user_id], dic_style[user_id] )
+
+            output_img = style_apply(dic_img[user_id], dic_style[user_id], dic_step[user_id])
 
             buttons = [
                 types.InlineKeyboardButton('Меню', callback_data='menu'),
@@ -504,15 +517,13 @@ def callback_worker(call):
 
 
         # обработка данного callback-запроса завершена
-        bot.answer_callback_query(callback_query_id=call.id)
+    # bot.answer_callback_query(callback_query_id=call.id)
 # -----------------------------------------------------------------------------
 # = = = Выполнение сценариев
 @bot.message_handler(content_types=["text"])
 def echo(message):
 
     user_id = str(message.from_user.id)
-    # user_name = str(message.from_user.username)  # Log пользователя
-    # time_sms = message.date
 
     word = message.text.capitalize().replace(".", ",")
     if word == "/":
@@ -564,11 +575,12 @@ def echo(message):
                 show_marker[user_id] = 0
                 #  название стиля изображения
                 name_style = list_style[Nomer][0]
-                dic_style[user_id] = [name_style, random_image(name_style) ]
+                ru_name_style = list_style[Nomer][1]
+                dic_style[user_id] = [name_style, random_image(name_style), ru_name_style]
                 #  вывод изображения стиля
                 img_sample = img_show( random_image (name_style) )
 
-                text = f'✔️ - выбран стиль: {list_style[Nomer][1]}'
+                text = f'✔️ - выбран стиль: {dic_style[user_id] [2]}'
                 bot.send_photo(message.chat.id, img_sample )
                 bot.send_message(message.chat.id, f'{text}', reply_markup=keyboard)
 
@@ -581,9 +593,8 @@ def echo(message):
             bot.send_message(message.chat.id, f'{text_3}\n {text_style}', reply_markup=keyboard)
 
     # --- Сценарий -  выбор стиля
-    elif style_marker[user_id] == 1:
+    elif style_marker[user_id] == 1 or style_marker[user_id] == 2 :
 
-        # style_marker[user_id] = 0
         show_marker[user_id] = 0
 
         Nomer = message.text
@@ -592,62 +603,46 @@ def echo(message):
 
             if Nomer <= len(list_style) and Nomer > 0:
 
-                style_marker[user_id] = 0
                 #  название стиля изображения
                 name_style = list_style[Nomer][0]
-                dic_style[user_id] = [name_style, random_image(name_style)]
-
-                buttons = [
-                    types.InlineKeyboardButton('Пример стиля', callback_data='show_style'),
-                    types.InlineKeyboardButton('Добавить изображение', callback_data='new_image'),
-                    types.InlineKeyboardButton('Меню', callback_data='menu'),
-                    types.InlineKeyboardButton('Отмена', callback_data='cancel')
-                ]
-                keyboard = types.InlineKeyboardMarkup(row_width=2)
-                keyboard.add(*buttons)
+                ru_name_style = list_style[Nomer][1]
+                dic_style[user_id] = [name_style, random_image(name_style), ru_name_style]
 
                 if dic_img.get(user_id) is not None:
 
-                    text_1 = f'✔️ - выбран стиль: {list_style[Nomer][1]}'
+                   text_1 = f'✔️ - выбран стиль: { dic_style[user_id][2] }'
 
-                    buttons = [
-                        types.InlineKeyboardButton('Применить', callback_data='apply'),
-                        types.InlineKeyboardButton('Новое изображение', callback_data='new_image'),
-                        types.InlineKeyboardButton('Меню', callback_data='menu'),
-                        types.InlineKeyboardButton('Отмена', callback_data='cancel')
-                    ]
-                    keyboard = types.InlineKeyboardMarkup(row_width=2)
-                    keyboard.add(*buttons)
+                    # if  style_marker.get(user_id) == 1 :
 
-                    if image_marker[user_id] == 1:
+                   style_marker[user_id] = 0
+                   bot.send_message(message.chat.id, f'{text_1}\n'
+                                                     f'[ ■_■_□_□_□ ] ...выполняю перенос стиля...\n'
+                                                     f'⏰... это займет несколько минут...')
 
-                       image_marker[user_id] = 0
-                       bot.send_message(message.chat.id, f'[ ■_■_□_□_□ ] ...выполняю перенос стиля...\n'
-                                                         f'⏰... это займет не более 1 мин.')
+                   output_img = style_apply(dic_img[user_id], dic_style[user_id], dic_step[user_id])
 
-                       output_img = style_apply(dic_img[user_id], dic_style[user_id])
+                   buttons = [
+                       types.InlineKeyboardButton('Меню', callback_data='menu'),
+                       types.InlineKeyboardButton('Завершить', callback_data='cancel'),
+                       types.InlineKeyboardButton('Выбрать новый стиль', callback_data='new_style'),
+                       types.InlineKeyboardButton('Загрузить новое изображение', callback_data='new_image')
+                   ]
+                   keyboard = types.InlineKeyboardMarkup(row_width=2)
+                   keyboard.add(*buttons)
 
-                       buttons = [
-                           types.InlineKeyboardButton('Меню', callback_data='menu'),
-                           types.InlineKeyboardButton('Завершить', callback_data='cancel'),
-                           types.InlineKeyboardButton('Выбрать новый стиль', callback_data='new_style'),
-                           types.InlineKeyboardButton('Загрузить новое изображение', callback_data='new_image')
-                       ]
-                       keyboard = types.InlineKeyboardMarkup(row_width=2)
-                       keyboard.add(*buttons)
+                   del dic_style[user_id]
 
-                       bot.send_photo(message.chat.id, output_img)
-                       bot.send_message(message.chat.id, f'✨ Новое изображение', reply_markup=keyboard)
+                   bot.send_photo(message.chat.id, output_img)
+                   bot.send_message(message.chat.id, f'✨ Новое изображение', reply_markup=keyboard)
 
-                    else:
-                        bot.send_message(message.chat.id, f'{text_1}\nПрименить стиль к изображению или загрузить новое?'
-                                     , reply_markup=keyboard)
                 else:
                     #  название стиля изображения
                     name_style = list_style[Nomer][0]
-                    dic_style[user_id] = [name_style, random_image(name_style)]
+                    ru_name_style = list_style[Nomer][1]
+                    dic_style[user_id] = [name_style, random_image(name_style), ru_name_style]
 
-                    text_2 = f'✔️ - выбран стиль: {list_style[Nomer][1]}'
+                    text_2 = f'✔️ - выбран стиль: {dic_style[user_id][2]}'
+
                     buttons = [
                         types.InlineKeyboardButton('Пример стиля', callback_data='show_style'),
                         types.InlineKeyboardButton('Описание команд', callback_data='info'),

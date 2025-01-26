@@ -7,21 +7,12 @@ import cv2
 import copy
 import random
 
-# from tqdm.notebook import tqdm
-# from collections import defaultdict
-
 import numpy as np
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 import torch.optim as optim
-
-# from torchsummary import summary
-# from IPython.display import clear_output
-# import seaborn as sns
-
-import torch
 import torchvision
 from torchvision import transforms
 import torchvision.models as models
@@ -35,24 +26,10 @@ warnings.simplefilter("ignore")
 
 from setting import *
 
-# from file_img import *
-#
-# #  вывод изображения стиля
-# name_style = 'cubism'
-# print( img_style_proba (name_style) )
-#  # img_show(style_img['cubism'][1][0] )
-# plt.show()
-
-
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# print(device)
-
 # = = =
-# вспомогаьельные функйии для CNN
+# --- вспомогаьельные функйии для CNN
 
-# - подсчет loss для исходного изображения
-
+# --- подсчет loss для исходного изображения
 class ContentLoss(nn.Module):
 
     def __init__(self, target,):
@@ -64,8 +41,8 @@ class ContentLoss(nn.Module):
         self.loss = F.mse_loss(input, self.target)
         return input
 
-# - функция потерь для стиля
-# матрица Грама
+# --- функция потерь для стиля
+# - матрица Грама
 def gram_matrix( input):
 
     a, b, c, d = input.size()
@@ -94,11 +71,9 @@ class StyleLoss(nn.Module):
         self.loss = F.mse_loss(G, self.target)
         return input
 
-# - нормализация тензора изображений для обучения модели
-
+# --- нормализация тензора изображений для обучения модели
 cnn_normalization_mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
 cnn_normalization_std = torch.tensor([0.229, 0.224, 0.225]).to(device)
-
 class Normalization(nn.Module):
     def __init__(self, mean, std):
         super(Normalization, self).__init__()
@@ -110,8 +85,7 @@ class Normalization(nn.Module):
 
         return (img - self.mean) / self.std
 
-# - функция рассчета признаков стиля и контента
-
+# --- функция рассчета признаков стиля и контента
 def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
                                style_img, content_img,
                                content_layers=Content_Layers,
@@ -164,14 +138,12 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
 
     return model, style_losses, content_losses
 
-# - оптимизатор
-
+# --- оптимизатор
 def get_input_optimizer(input_img):
     optimizer = optim.Adam([input_img.requires_grad_()])
     return optimizer
 
-# - обучение модели (процесс переноса стиля)
-
+# --- обучение модели (процесс переноса стиля)
 def run_style_transfer(cnn, normalization_mean, normalization_std,
                        content_img, style_img, input_img, num_steps=100,
                        style_weight=1000000, content_weight=1):
@@ -223,8 +195,7 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
 
     return (input_img, sc_style, sc_content )
 
-# загрузка модели vgg19
-
+# --- загрузка модели vgg19
 model_vgg = models.vgg19(pretrained=True).features.to(device).eval()
 
 # print(model_vgg)
