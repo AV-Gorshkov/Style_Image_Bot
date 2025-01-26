@@ -279,13 +279,13 @@ def photo(message):
         #  название исходного файла и исходный размер в словарь
         dic_img[user_id] = [text, in_img_size ]
 
-        print( dic_img[user_id] )
+        # print( dic_img[user_id] )
 
         #  проверка на выбор изображения стиля
         if dic_style.get(user_id) is not None:
 
            bot.send_message(message.chat.id, f'[ ■_■_□_□_□ ] ...выполняю перенос стиля...\n'
-                                             f'⏰... это займет не более 1 мин.')
+                                             f'⏰... это займет несколько минут...')
            # #  начальный размер файла
            # in_size = dic_img[user_id][1]
            # #  изображение стиля
@@ -304,8 +304,7 @@ def photo(message):
            #
            # # преобразование изображение в исходный размер
            # img_resize = resize_loader(output_model, in_size)
-
-           print( dic_img[user_id], dic_style[user_id] )
+           # print( dic_img[user_id], dic_style[user_id] )
 
            output_img = style_apply( dic_img[user_id], dic_style[user_id] )
 
@@ -319,7 +318,7 @@ def photo(message):
            keyboard.add(*buttons)
 
            bot.send_photo(message.chat.id, output_img)
-           bot.send_message(message.chat.id, f'✨ Новое изображение')
+           bot.send_message(message.chat.id, f'✨ Новое изображение', reply_markup=keyboard )
            # bot.send_photo(message.chat.id, img_resize, caption='Новое изображение', reply_markup=keyboard )
         else:
             # изображения стиля не выбрано. предложить варианты стиля
@@ -357,7 +356,7 @@ def callback_worker(call):
     user_id = str(call.from_user.id)
     # message_id = call.message.message_id
     # chat_id = call.message.chat.id
-    print(user_id)
+    # print(user_id)
 
     if call.message:
         # ----- Выполнение кнопки новое изобажение
