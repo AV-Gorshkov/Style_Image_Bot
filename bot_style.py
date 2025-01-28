@@ -239,8 +239,6 @@ def photo(message):
         if dic_step.get(user_id) is None:
             dic_step[user_id] = dic_n_step['med']
 
-        print(dic_step[user_id])
-
         #  проверка на выбор изображения стиля
         if dic_style.get(user_id) is not None:
 
@@ -391,7 +389,7 @@ def callback_worker(call):
                              reply_markup=keyboard)
 
         #  Выбор нового стиля для изображения
-        elif call.data == "nwe_style":
+        elif call.data == "new_style":
 
             style_marker[user_id] = 2
             show_marker[user_id]  = 0
