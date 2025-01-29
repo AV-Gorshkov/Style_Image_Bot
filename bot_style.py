@@ -1,13 +1,15 @@
 import requests
+import os
 
 from setting import *
-from file_img import *
+from support_function_image import *
 
-import os
 import telebot
-from telebot import types
-from datetime import datetime
 from telebot import TeleBot
+
+from telebot import types
+
+from datetime import datetime
 import time
 
 from PIL import Image
@@ -31,7 +33,7 @@ dic_step = {}    # глубина стилизации (кол-во шагов �
 HELP = """
 Приветствую!✌️ 
 Я Чат-Бот! Помогу преобразовать твое изображение под один из известных стилей.
-Просто загрузи свое изображение и я помогу его преобразовать !
+Просто загрузи свое изображение и следуй моим подсказкам!
 Нажми на кнопку ниже, что бы узнать функционал доступных команд и их описание:
 ©️
 """
